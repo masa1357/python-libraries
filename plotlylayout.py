@@ -8,6 +8,10 @@ from typing import Dict, List
 
 pio.templates.default = "plotly_white"
 
+## version取得関数
+def version():
+    return "0.0.1"
+
 def save_and_plot(fig, filename:str='NoName', path:pathlib='./', format:List[str]=['svg', 'png']):
     for f in format:
         pio.write_image(fig, path/f'{filename}.{f}')

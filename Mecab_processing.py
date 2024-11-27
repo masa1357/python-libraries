@@ -5,6 +5,8 @@ from sklearn.model_selection import train_test_split
 from argparse import ArgumentParser
 import re
 from typing import Dict, List
+
+#---
 import MeCab
 import re
 from gensim.models import Word2Vec
@@ -12,74 +14,17 @@ import numpy as np
 import logging
 from tqdm import tqdm
 
-def make_wakati(sentence):
-    tagger = MeCab.Tagger("-Owakati")
-    sentence = tagger.parse(sentence)
-    sentence = re.sub(r"[0-9０-９a-zA-Zａ-ｚＡ-Ｚ]+", " ", sentence)
-    sentence = re.sub(
-        r"[\．_－―─！＠＃＄％＾＆\-‐|\\＊\“（）＿■×+α※÷⇒—●★☆〇◎◆▼◇△□(：〜～＋=＝)／*&^%$#@!~`){}［］…\[\]\"\'\”\’:;<>?＜＞〔〕〈〉？、。・,\./『』【】「」→←○《》≪≫\n\u3000]+",
-        "",
-        sentence,
-    )
-    wakati = sentence.split(" ")
-    wakati = list(filter(("").__ne__, wakati))
-    return wakati
 
-
-def filtered_wakati(sentence, filter=False):
-    tagger = MeCab.Tagger("-Ochasen")  # -Owakati を -Ochasen に変更して形態素情報を取得
-    parsed_sentence = tagger.parse(sentence)
-    wakati = []
-
-    for line in parsed_sentence.splitlines():
-        if line == "EOS":
-            break
-        fields = line.split("\t")
-        if len(fields) < 4:
-            continue
-        word = fields[0]
-        pos = fields[3].split('-')[0]  # 品詞情報を取得
-
-        # filter=True の場合は、動詞、名詞、形容詞のみを抽出
-        if not filter or pos in ["名詞", "動詞", "形容詞"]:
-            wakati.append(word)
-
-    # 文字列のクレンジング
-    cleaned_sentence = " ".join(wakati)
-    cleaned_sentence = re.sub(r"[0-9０-９a-zA-Zａ-ｚＡ-Ｚ]+", " ", cleaned_sentence)
-    cleaned_sentence = re.sub(
-        r"[\．_－―─！＠＃＄％＾＆\-‐|\\＊\“（）＿■×+α※÷⇒—●★☆〇◎◆▼◇△□(：〜～＋=＝)／*&^%$#@!~`){}［］…\[\]\"\'\”\’:;<>?＜＞〔〕〈〉？、。・,\./『』【】「」→←○《》≪≫\n\u3000]+",
-        "",
-        cleaned_sentence,
-    )
-    
-    # クレンジング後に再度分割してリストに
-    wakati = cleaned_sentence.split(" ")
-    wakati = list(filter(("").__ne__, wakati))
-    
-    return wakati
-
-
-def count_words(df:pd.DataFrame, key:str)->pd.DataFrame:
-    """
-    文章の単語数をカウントする
-    """
-    df["word_count"] = df[key].apply(lambda x: len(make_wakati(x)))
-    return df
+# version取得関数
+def version():
+    return "0.0.1"
 
 class GetSentenceVector:
-    """
-    GetSentenceVectorによって文章をベクトル化する
-    Model : Word2Vec
-    Morphological Analyzer : MeCab
-    """
-
     def __init__(self, args:Dict[str, object], corpus_df:pd.DataFrame):
         self.LABEL_MAPPING = {"A": 0, "B": 1, "C": 2, "D": 3, "F": 4}
         self.logger = args["logger"].getChild(__name__)
         MODEL_PATH = args["MODEL_PATH"]
-        self.MODEL_PATH = MODEL_PATH/"word2vec_testcase.model"
-        # self.tagger = MeCab.Tagger("-Owakati")
+        self.tagger = MeCab.Tagger("-Owakati")
         # word2vec parameters
         self.num_features = 200
         self.min_word_count = 5
@@ -87,6 +32,7 @@ class GetSentenceVector:
         self.context = 10
         self.downsampling = 1e-3
         self.model_name = "word2vec_testcase.model"
+        self.MODEL_PATH = MODEL_PATH/self.model_name
         self.corpus = []
 
         #INFO: 最初にモデルを準備しておく
@@ -95,16 +41,13 @@ class GetSentenceVector:
             self.corpus.append(self.make_wakati(doc))
         self.train_model()
 
-    def __call__(self, plot_df:pd.DataFrame,key:str, filter=False) -> pd.DataFrame:
+    def __call__(self, df:pd.DataFrame,key:str) -> pd.DataFrame:
 
-        # print(len(plot_df[key]))
+        # print(len(df[key]))
         self.logger.debug(f"processing {key} ...")
         X, Y, texts = [], [], []
-        for doc, category in tqdm(zip(plot_df[key], plot_df["label"])):
-            if filter:
-                wakati = filtered_wakati(doc)
-            else:
-                wakati = make_wakati(doc)
+        for doc, category in tqdm(zip(df[key], df["label"])):
+            wakati = self.make_wakati(doc)
             docvec = self.wordvec2docvec(wakati)
             X.append(list(docvec))
             Y.append(category)
@@ -113,10 +56,13 @@ class GetSentenceVector:
         data_Y = pd.DataFrame(Y, columns=["category_id"])
         # data_texts = pd.DataFrame(texts, columns=["text"])
         # data_X["text"] = text
-        # data = pd.concat([plot_df, data_X, data_Y], axis=1)
+        # data = pd.concat([df, data_X, data_Y], axis=1)
         return data_X, data_Y, texts
 
 
+#-------------------------------------------------------------------------------------
+# common functions
+#-------------------------------------------------------------------------------------
     def train_model(self):
         # word2vecモデルの作成＆モデルの保存
         # logging.basicConfig(
@@ -143,9 +89,22 @@ class GetSentenceVector:
                 sample=self.downsampling,
                 seed=1,
             )
-            self.model.save(self.model_name)
-            self.logger.info("Done.")
+            self.model.save(str(self.MODEL_PATH))
+            self.logger.info(f"saved word2vec model:{self.MODEL_PATH}")
 
+
+    def make_wakati(self, sentence):
+        sentence = self.tagger.parse(sentence)
+        sentence = re.sub(r"[0-9０-９a-zA-Zａ-ｚＡ-Ｚ]+", " ", sentence)
+        sentence = re.sub(
+            r"[\．_－―─！＠＃＄％＾＆\-‐|\\＊\“（）＿■×+α※÷⇒—●★☆〇◎◆▼◇△□(：〜～＋=＝)／*&^%$#@!~`){}［］…\[\]\"\'\”\’:;<>?＜＞〔〕〈〉？、。・,\./『』【】「」→←○《》≪≫\n\u3000]+",
+            "",
+            sentence,
+        )
+        wakati = sentence.split(" ")
+        wakati = list(filter(("").__ne__, wakati))
+        return wakati
+    
     def wordvec2docvec(self, sentence):
         # 文章ベクトルの初期値（0ベクトルを初期値とする）
         docvecs = np.zeros(self.num_features, dtype="float32")

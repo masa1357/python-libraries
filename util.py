@@ -12,6 +12,11 @@ import torch
 from sklearn.model_selection import train_test_split
 
 
+
+# version取得関数
+def version():
+    return "0.0.1"
+
 #? loggerの設定
 def set_logger(name: str = __name__):
 

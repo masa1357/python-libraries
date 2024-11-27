@@ -10,6 +10,10 @@ STOPWORDS = ["特にな" "特に無"]
 
 LABEL_MAPPING = {"A": 0, "B": 1, "C": 2, "D": 3, "F": 4}
 
+# version取得関数
+def version():
+    return "0.0.1"
+
 class DataProcessing:
     def __init__(self, args:Dict[str, object]):
         self.logger = args["logger"].getChild(__name__)
@@ -76,6 +80,25 @@ class DataProcessing:
             self.logger.error(f"No {rules} files in {path}")
 
         return df
+
+        #TODO 動作確認後消す
+        # data_path = Path(path)
+        # self.logger.info(f"read {data_path} {rules} data...")
+
+        # file_list = list(data_path.glob(rules))
+        # self.logger.info(f"read : {file_list}")
+
+        # df = pd.DataFrame()
+        # if len(file_list) > 0:
+        #     for i in file_list:
+        #         temp_df = pd.read_csv(i)
+        #         df = pd.concat([df, temp_df], axis=0, ignore_index=True)
+        #     self.logger.info(f"get {len(df)} rows.")
+        # else:
+        #     self.logger.error(f"No {rules} files in {data_path}")
+
+        # return df
+
 
     def data_clean(self,
                     df:pd.DataFrame,
@@ -245,38 +268,25 @@ class DataProcessing:
 
 #INFO 生徒ごとに1行にまとめる処理を関数として定義しておく（debug用）
 def encode(df, key="userid", label="label", text="text",logger=None, filter=None):
-    """
-    データフレームを特定の列を基準に分割する．
-
-    Parameters
-    ----------
-    df          : DataFrame
-        対象df
-    key         : str
-        主キー列名
-    label       : str
-        ラベル列名
-    text        : str
-        テキスト列名
-    filter    : int
-        questionの選択用
-    """
     #filterがある場合、その数値と一致する列"question_number"以外の行を削除
     if filter:
         df = df[df["question_number"] == filter]
 
     #INFO 講義番号，質問番号ごとに列を作成
     def create_column_name(row):
-        return f"{int(row['course_number']):02d}-{row['question_number']}"
+        if filter is None:
+            return f"{int(row['course_number']):02d}-{row['question_number']}"
+        else:
+            return f"{int(row['course_number']):02d}"
 
     #INFO: ノイズ除去
     #DEBUG: データクリーニングは実行済みとする
     # df, _ = data_clean(df, text=text)
 
     #INFO: 新しい列を作成
-    df.loc[:, "new_column"] = df.apply(create_column_name, axis=1)
+    # df.loc[:, "new_column"] = df.apply(create_column_name, axis=1)
     #! 可読性向上のため上に変更 - 動作確認語削除
-    # df["new_column"] = df.apply(create_column_name, axis=1)
+    df["new_column"] = df.apply(create_column_name, axis=1)
 
     #INFO: 新しいデータフレームを定義
     df_pivoted = df.pivot_table(
@@ -284,6 +294,8 @@ def encode(df, key="userid", label="label", text="text",logger=None, filter=None
         columns="new_column",
         values=text,
         aggfunc=lambda x: " ".join(str(item) for item in x),
+        #TODO 動作確認後消す
+        # aggfunc=lambda x: " ".join(x),
     ).reset_index()
     logger.debug(f"columns: {df_pivoted.columns}")
 
