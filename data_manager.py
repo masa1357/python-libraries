@@ -7,12 +7,46 @@ import re
 from typing import Dict, List
 
 STOPWORDS = ["特にな" "特に無"]
+replacement_map = {
+    "、": ",",  # カンマ
+    "。": ".",  # ピリオド
+    "！": "!",  # エクスクラメーションマーク
+    "？": "?",  # クエスチョンマーク
+    "｡": ".",   # ピリオド
+    "･": "-",   # ハイフン
+    "ﾟ": "",    # 削除
+    "＇": "'",  # アポストロフィ
+    "＂": '"',  # ダブルクォーテーション
+    "「": '"',  # 左ダブルクォーテーション
+    "」": '"',  # 右ダブルクォーテーション
+    "『": '"',  # 左ダブルクォーテーション
+    "』": '"',  # 右ダブルクォーテーション
+    "（": "(",  # 左括弧
+    "）": ")",  # 右括弧
+    "《": "<",  # 左山括弧
+    "》": ">",  # 右山括弧
+    "【": "[",  # 左角括弧
+    "】": "]",  # 右角括弧
+    "〔": "[",  # 左角括弧
+    "〕": "]",  # 右角括弧
+    "…": "...", # 省略記号
+    "―": "-",   # 長いハイフン
+    "ー": "-",   # 長音符
+    "－": "-",   # マイナス
+    "／": "/",   # スラッシュ
+    "＼": "\\",  # バックスラッシュ
+    "〜": "~",   # チルダ
+    "〝": '"',  # 左ダブルクォーテーション
+    "〟": '"',  # 右ダブルクォーテーション
+    "〈": "<",  # 左山括弧
+    "〉": ">"   # 右山括弧
+}
 
 LABEL_MAPPING = {"A": 0, "B": 1, "C": 2, "D": 3, "F": 4}
 
 # version取得関数
 def version():
-    return "0.0.1"
+    return "0.0.2"
 
 class DataProcessing:
     def __init__(self, args:Dict[str, object]):
@@ -25,6 +59,7 @@ class DataProcessing:
         self.mode = args["mode"]
         self.split_rate = args["split_rate"]
         self.seed = args["seed"]
+        
         #INFO ディレクトリ内にReflectionフォルダがあるか確認、あるならパスを設定
         self.reflection_path = Path(self.root_path) / "Reflection"
         if not self.reflection_path.is_dir():
@@ -150,9 +185,12 @@ class DataProcessing:
         self.logger.info(f"dump_df shape : {dump_df.shape}")
 
         #INFO: stopwordsの除去
-        cleaned_df[text] = cleaned_df[text].str.replace(
-            r"[、。！？｡･ﾟ＇＂「」『』（）《》【】〔〕…―ー－／＼〜〝〟〈〉]", "", regex=True
-        )
+        # cleaned_df[text] = cleaned_df[text].str.replace(
+        #     r"[、。！？｡･ﾟ＇＂「」『』（）《》【】〔〕…―ー－／＼〜〝〟〈〉]", "", regex=True
+        # )
+        # -> 表現の統一を行うように変更
+        cleaned_df['text'] = cleaned_df['text'].replace(replacement_map, regex=True)
+
 
         return cleaned_df, dump_df
 

@@ -15,7 +15,7 @@ from sklearn.model_selection import train_test_split
 
 # version取得関数
 def version():
-    return "0.0.1"
+    return "0.0.2"
 
 #? loggerの設定
 def set_logger(name: str = __name__):
@@ -45,6 +45,12 @@ def set_seed(seed: int = 42):
     os.environ["PYTHONHASHSEED"] = str(seed)
     random.seed(seed)
     np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)  # 複数GPU対応
+        torch.backends.cudnn.deterministic = True 
+        torch.backends.cudnn.benchmark = False  
 
 #? 時間計測関数
 @contextmanager
