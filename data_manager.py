@@ -6,7 +6,9 @@ from argparse import ArgumentParser
 import re
 from typing import Dict, List
 
-STOPWORDS = ["特にな" "特に無"]
+STOPWORDS = []#["特にな" "特に無"]
+
+LABEL_MAPPING = {"A": 0, "B": 1, "C": 2, "D": 3, "F": 4}
 replacement_map = {
     "、": ",",  # カンマ
     "。": ".",  # ピリオド
@@ -41,9 +43,6 @@ replacement_map = {
     "〈": "<",  # 左山括弧
     "〉": ">"   # 右山括弧
 }
-
-LABEL_MAPPING = {"A": 0, "B": 1, "C": 2, "D": 3, "F": 4}
-
 # version取得関数
 def version():
     return "0.0.2"
@@ -59,7 +58,6 @@ class DataProcessing:
         self.mode = args["mode"]
         self.split_rate = args["split_rate"]
         self.seed = args["seed"]
-        
         #INFO ディレクトリ内にReflectionフォルダがあるか確認、あるならパスを設定
         self.reflection_path = Path(self.root_path) / "Reflection"
         if not self.reflection_path.is_dir():
@@ -188,9 +186,8 @@ class DataProcessing:
         # cleaned_df[text] = cleaned_df[text].str.replace(
         #     r"[、。！？｡･ﾟ＇＂「」『』（）《》【】〔〕…―ー－／＼〜〝〟〈〉]", "", regex=True
         # )
-        # -> 表現の統一を行うように変更
-        cleaned_df['text'] = cleaned_df['text'].replace(replacement_map, regex=True)
 
+        cleaned_df['text'] = cleaned_df[text].str.replace(replacement_map, regex=True)
 
         return cleaned_df, dump_df
 
