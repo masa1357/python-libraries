@@ -10,9 +10,9 @@ _original_savefig = plt.savefig
 
 # version取得関数
 def version():
-    return "0.0.1"
+    return "0.0.2"
 
-def custom_savefig(filename, *args, **kwargs):
+def custom_savefig(filename, format = ['png', 'svg', 'eps'], *args, **kwargs):
     """
     カスタムsavefig関数: デフォルトで指定ディレクトリに保存
     """
@@ -23,8 +23,11 @@ def custom_savefig(filename, *args, **kwargs):
     filepath = os.path.join(DEFAULT_SAVE_DIR, filename)
     
     # 元のsavefigを使用して保存
-    _original_savefig(filepath, *args, **kwargs)
-    print(f"Figure saved to {filepath}")
+    for f in format:
+        _original_savefig(filepath + "." + f, *args, **kwargs)
+        print(f"Figure saved to {filepath}.{f}")
+    # _original_savefig(filepath, *args, **kwargs)
+    # print(f"Figure saved to {filepath}")
 
 def set_default_save_dir(path):
     """
